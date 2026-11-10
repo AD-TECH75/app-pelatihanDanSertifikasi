@@ -20,5 +20,9 @@
     "mysql2": "^3.24.6",
     "puppeteer": "^25.16.0",
     "qrcode": "^1.5.4"
+  },
+  "allowScripts": {
+    "aws-sdk@2.1693.0": true,
+    "puppeteer@25.16.0": true
   }
 }
