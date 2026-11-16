@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap: https://ssl.gstatic.com; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://*.supabase.co https://api.sertifikat.id">
+  <meta name="viewport" content="initial-scale=1, width=device-width, viewport-fit=cover">
+  <title>Daftar Sertifikasi</title>
+</head>
+<body style="font-family: Arial; padding: 12px;">
+  <h2>Daftar Sertifikasi</h2>
+
+  <div id="auth-box" style="border:1px solid #ccc; padding:10px; margin-bottom:12px;">
+    <input id="email" type="email" placeholder="Email" style="width:100%; margin-bottom:6px;"><br>
+    <input id="password" type="password" placeholder="Password (min. 6 karakter)" style="width:100%; margin-bottom:6px;"><br>
+    <input id="nama" placeholder="Nama (untuk registrasi)" style="width:100%; margin-bottom:6px;"><br>
+    <input id="telepon" placeholder="No. telepon (untuk registrasi)" style="width:100%; margin-bottom:6px;"><br>
+    <button id="btn-login">Login</button>
+    <button id="btn-register">Registrasi</button>
+    <p id="auth-status" style="font-size:12px; color:#555;"></p>
+  </div>
+
+  <div id="sync-badge" style="display:none"></div>
+  <div id="katalog-list"></div>
+  <div id="pendaftaran-list"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="cordova.js"></script>
+  <script src="js/index.js"></script>
+</body>
+</html>
