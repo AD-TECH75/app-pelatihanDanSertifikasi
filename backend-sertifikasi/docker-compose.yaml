@@ -1,0 +1,104 @@
+x-app: &app
+  build: .
+  image: sertifikasi-backend:latest
+  restart: unless-stopped
+  environment:
+    DB_HOST: mysql-db
+    DB_USER: ${MYSQL_USER}
+    DB_PASSWORD: ${MYSQL_PASSWORD}
+    DB_NAME: db_web_backend
+    REDIS_URL: redis://:${REDIS_PASSWORD}@redis-cache:6379
+    MONGO_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/db_certificates?authSource=admin
+    SUPABASE_URL: ${SUPABASE_URL}
+    SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+    WEBHOOK_SECRET_KEY: ${WEBHOOK_SECRET_KEY}
+    JWT_SECRET: ${JWT_SECRET}
+    ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+    AWS_REGION: ${AWS_REGION}
+    AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+    AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+    S3_BUCKET_NAME: ${S3_BUCKET_NAME}
+    VERIFY_BASE_URL: ${VERIFY_BASE_URL}
+  depends_on:
+    mysql-db:
+      condition: service_healthy
+    redis-cache:
+      condition: service_started
+    mongo-db:
+      condition: service_started
+
+services:
+  mysql-db:
+    image: mysql:8.4
+    container_name: mysql_server
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: db_web_backend
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "127.0.0.1:3306:3306" # hanya lokal; hapus baris ini bila tidak perlu akses dari host
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro # skema Modul 1
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  mongo-db:
+    image: mongo:7.0
+    container_name: mongo_server
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+
+  redis-cache:
+    image: redis:7-alpine
+    container_name: redis_server
+    restart: unless-stopped
+    command:
+      [
+        "redis-server",
+        "--requirepass",
+        "${REDIS_PASSWORD}",
+        "--appendonly",
+        "yes",
+      ]
+    volumes:
+      - redis_data:/data # menjaga counter nomor sertifikat dan antrean saat restart
+
+  api_server:
+    <<: *app
+    container_name: background_api
+    ports:
+      - "3000:3000"
+
+  pdf_worker:
+    <<: *app
+    container_name: background_worker
+    command: node worker.js
+
+  reconciler:
+    <<: *app
+    container_name: cron_reconciler
+    command: node cron-reconciliation.js
+
+  archiver:
+    <<: *app
+    container_name: cron_archiver
+    command: node archive-worker.js
+
+volumes:
+  mysql_data:
+  mongo_data:
+  redis_data:
