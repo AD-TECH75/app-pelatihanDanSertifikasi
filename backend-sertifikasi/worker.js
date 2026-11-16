@@ -19,6 +19,7 @@ const escapeHtml = (s) =>
 				c
 			],
 	);
+
 async function renderPdf(job, certNumber, verifyUrl) {
 	const qr = await QRCode.toDataURL(verifyUrl);
 	const html = `<html>
@@ -52,6 +53,7 @@ async function renderPdf(job, certNumber, verifyUrl) {
 		await browser.close(); // selalu ditutup, walaupun terjadi error
 	}
 }
+
 async function handleJob(job) {
 	if (
 		!job.pendaftaran_id ||
@@ -94,8 +96,32 @@ async function handleJob(job) {
 	});
 	console.log(`Sertifikat ${certNumber} sukses dibuat!`);
 }
-async function handleFailure(job, err) {// diganti versi retry/DLQ di Modul 8
-	console.error("Gagal memproses antrean sertifikat:", err);
+
+const { Certificate, FailedJob } = require("./models");
+const MAX_ATTEMPTS = 3;
+
+async function handleFailure(job, err) {
+	// diganti versi retry/DLQ di Modul 8
+	const attempts = (job.attempts || 0) + 1;
+	console.error(
+		`Job ${job.pendaftaran_id} gagal (percobaan ${attempts}/${MAX_ATTEMPTS}):`,
+		err.message,
+	);
+	if (attempts < MAX_ATTEMPTS) {
+		// retry dengan jeda bertambah: 10 detik, 20 detik
+		const delayMs = 2 ** attempts * 5000;
+		setTimeout(() => {
+			redis
+				.rpush(QUEUE, JSON.stringify({ ...job, attempts }))
+				.catch(console.error);
+		}, delayMs);
+		return;
+	}
+	await FailedJob.create({
+		payload: job,
+		error_message: err.message,
+		attempts,
+	});
 }
 
 async function processQueue() {
